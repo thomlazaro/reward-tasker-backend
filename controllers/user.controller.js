@@ -1,6 +1,7 @@
 const db = require("../models");
 const User = db.user;
 const pass = "password";
+const cf = require("../functions/custom-function.js");
 // Create and Save a new User
 exports.create = (req, res) => {
   // Validate request
@@ -12,7 +13,7 @@ exports.create = (req, res) => {
   }
 
   //create base64 string for default password
-  let base64pass = encodeToBase64(pass);
+  let base64pass = cf.encodeToBase64(pass);
 
   // Create a User
   const user = new User({
@@ -119,13 +120,6 @@ exports.update = (req, res) => {
     });
 };
 
-
-function encodeToBase64(password){
-  let buff = new Buffer.alloc(password.length,password);
-  let base64pass = buff.toString("base64");
-
-  return base64pass;  
-}
 // Delete a User with the specified id in the request
 // exports.delete = (req, res) => {
 //   const id = req.params.id;
