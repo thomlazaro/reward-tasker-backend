@@ -43,7 +43,7 @@ exports.create = (req, res) => {
 // Retrieve all Users from the database.
 exports.findAll = (req, res) => {
 
-  User.find({})
+  User.find({},{_id:0,password:0,createdAt:0,updatedAt:0,__v:0})
     .then(data => {
       res.send(
         { status : true , message:"Existing users retrieved successfully!" , data: data }
@@ -60,7 +60,7 @@ exports.findAll = (req, res) => {
 exports.findOne = (req, res) => {
   const id = req.params.id;
 
-  User.find({"id":id})
+  User.find({"id":id},{_id:0,password:0,createdAt:0,updatedAt:0,__v:0})
     .then(data => {
       if(!data || !data.length){
         res.status(404).send({ status: false , message: "User with id " + id +" does not exist!", data: null });
