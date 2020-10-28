@@ -9,5 +9,6 @@ db.url = dbConfig.URI;
 db.user = require("./user.model.js")(mongoose);
 db.team = require("./team.model.js")(mongoose);
 db.task = require("./task.model.js")(mongoose);
+db.ctask = require("./complete_task.model.js")(mongoose);
 
 module.exports = db;

@@ -18,6 +18,9 @@ module.exports = app => {
   // Update a task with id
   router.put("/:id", task.update);
 
+  // Complete task assigned to user
+  router.post("/complete/:id",task.completeTask);
+
 
   app.use('/api/task', router);
 };

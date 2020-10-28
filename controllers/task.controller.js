@@ -1,6 +1,8 @@
 const db = require("../models");
 const Task = db.task;
 const Team = db.team;
+const CTask = db.ctask;
+const User = db.user;
 
 // Create and Save a new Task
 exports.create = (req, res) => {
@@ -76,6 +78,11 @@ exports.findByTeam = (req, res) => {
     else{
       res.status(404).send({ status: false , message: "Team with name " + team +" does not exist!", data: null });
     }
+  })
+  .catch(function(message){
+    res.status(500).send(
+      { status : false , message: message , data: null }
+    )
   });
 
 };
@@ -145,6 +152,74 @@ exports.update = (req, res) => {
     });
 };
 
+// Complete task using task id
+exports.completeTask = (req, res) => {
+  // Validate request
+  if (!req.body.task_id || !req.body.user_id) {
+    res.status(400).send(
+        { status : false , message:"No task id or user id provided!" , data: null }
+      );
+    return;
+  }
+
+  //get current Date today
+  let datenow = new Date();
+  let id = req.params.id;
+  let taskid = req.body.task_id;
+
+  // Create a Complete Task
+  const ctask = new CTask({
+        task_id: req.body.task_id,
+        user_id: req.body.user_id,
+        recurringType: req.body.recurringType,
+        notes: req.body.notes,
+        complete_date: datenow
+  });
+
+  checkUserExist(id).then(function(result) {
+  //if user exist continue on next query
+    if(result){
+      //check if task exist
+      checkTaskExist(taskid).then(function(result){
+        if(result){
+          // Save Complete Task in the database
+          ctask
+          .save(ctask)
+          .then(data => {
+            res.send(
+              { status : true , message:"Task completed!" , data: data }
+            );
+          })
+          .catch(err => {
+            res.status(500).send(
+              { status : false , message: err.message , data: null }
+            );
+          });
+        }
+        else{
+          res.status(404).send({ status: false , message: "Task with id " + id +" does not exist!", data: null });
+        }
+      })
+      .catch(function(message){
+        res.status(500).send(
+          { status : false , message: message , data: null }
+        )
+      });
+      ;
+    }
+    else{
+      res.status(404).send({ status: false , message: "User with id " + id +" does not exist!", data: null });
+    }
+  })
+  .catch(function(message){
+    res.status(500).send(
+      { status : false , message: message , data: null }
+    )
+  });
+
+};
+
+
 //custom functions exclusive to this controller**********************************
 
 //check if the team name exist in Teams Collection
@@ -166,12 +241,72 @@ function getTeam(team){
       reject(err.message);
     });
   })
-}
+};
 
 //async function for checking Team name
 async function checkTeamExist(team){
       //wait for promise    
       let result = await (getTeam(team));
+      //anything here is executed after result is resolved
+      return result;
+};
+
+//check if user exist in database
+function getUser(id){
+        
+  return new Promise((resolve, reject) => {
+     
+    User.find({"_id":id})
+    .then(data => {
+      if(!data || !data.length){
+        resolve(false);
+      }
+      else {
+        resolve(true);
+
+      }
+    })
+    .catch(err => {
+      console.log("getUser function error:" + err.message);
+      reject(err.message);
+    });
+  })
+};
+
+//async function for checking if user exist
+async function checkUserExist(id){
+      //wait for promise    
+      let result = await (getUser(id));
+      //anything here is executed after result is resolved
+      return result;
+};
+
+//check if task exist in database
+function getTask(id){
+        
+  return new Promise((resolve, reject) => {
+     
+    Task.find({"_id":id})
+    .then(data => {
+      if(!data || !data.length){
+        resolve(false);
+      }
+      else {
+        resolve(true);
+
+      }
+    })
+    .catch(err => {
+      console.log("getTask function error:" + err.message);
+      reject(err.message);
+    });
+  })
+};
+
+//async function for checking if task exist
+async function checkTaskExist(id){
+      //wait for promise    
+      let result = await (getTask(id));
       //anything here is executed after result is resolved
       return result;
 };
