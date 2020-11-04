@@ -229,7 +229,7 @@ exports.getMyTask = (req, res) => {
   let id = req.params.id;
   let monthlylist;
   let weeklylist;
-
+  let mytasklist = [];
 
   //get the team name of the user
   checkUser(id,"team").then(function(result) {
@@ -256,15 +256,15 @@ exports.getMyTask = (req, res) => {
                 let compcount = 0;
                 //go through the retrived completed weekly list
                 while (compcount < result2.length) {
-                  
+
                   //compare weekly and completed weekly list and see if task is already completed
                   if(weeklylist[weekcount]._id.toString() === result2[compcount].task_id.toString()){
                     let datenow = new Date().toString().substr(4,11);
                     let datecomp = result2[compcount].complete_date.toString().substr(4,11);
-                    
+
                     //if today's date is not equal to completed date, remove task from weekly list
                     if(!(datenow === datecomp)){
-                      
+
                       weeklylist.splice(weekcount,1);
                       if(!(weekcount === 0)){
                         weekcount--;
@@ -272,17 +272,19 @@ exports.getMyTask = (req, res) => {
                       
                     }
                     else{
-                      
+
                       //if today's date is equal to completed date, status must be complete and break loop
                       weeklylist[weekcount].status = "Complete";
+                      weekcount++;
                       break;
                     }
                     compcount++;
                   }
                   else{
-                    
+
                     //if task does not exist on completed task list, status must be not complete
                     weeklylist[weekcount].status = "Not Complete";
+                    weekcount++;
                     compcount++;
                     
                   }
@@ -290,9 +292,11 @@ exports.getMyTask = (req, res) => {
                   
                 }
                 
-                weekcount++;
               };
-             
+              //console.log(weeklylist);
+              //append processed weeklylist and monthlylist and send as response
+              mytasklist = mytasklist.concat(weeklylist);
+
             })
             .catch(message => {
               res.status(500).send(
@@ -320,11 +324,11 @@ exports.getMyTask = (req, res) => {
               let monthcount = 0;
               //go through monthly task list
               while(monthcount < monthlylist.length) {
-                
+          
                 let compcount = 0;
                 //go through completed monthly task list
                 while (compcount < result2.length) {
-                  
+
                   //compare monthly list and completed monthly list and see if task was already completed
                   if(monthlylist[monthcount]._id.toString() === result2[compcount].task_id.toString()){
                     let datenow = new Date().toString().substr(4,11);
@@ -333,7 +337,7 @@ exports.getMyTask = (req, res) => {
                     
                     //if today's date is not equal to completed date, remove task from list
                     if(!(datenow === datecomp)){
-                      
+
                       monthlylist.splice(monthcount,1);
                       if(!(monthcount === 0)){
                         monthcount--;
@@ -344,6 +348,7 @@ exports.getMyTask = (req, res) => {
                     else{
                       //if today's date is equal to completed date, status must be complete and break loop
                       monthlylist[monthcount].status = "Complete";
+                      monthcount++;
                       break;
                     }
                     compcount++;
@@ -351,6 +356,7 @@ exports.getMyTask = (req, res) => {
                   else{
                     //if task does not exist in completed list, status must be not complete
                     monthlylist[monthcount].status = "Not Complete";
+                    monthcount++;
                     compcount++;
                     
                   }
@@ -358,10 +364,9 @@ exports.getMyTask = (req, res) => {
                   
                 }
                 
-                monthcount++;
               };
               //append processed weeklylist and monthlylist and send as response
-              let mytasklist = monthlylist.concat(weeklylist);
+              mytasklist = mytasklist.concat(monthlylist);
               res.send({mytask:mytasklist});
             })
             .catch(message => {
@@ -538,6 +543,7 @@ function getCWeeklyTask(userid){
       sunofweek.setDate(sunofweek.getDate()-dayofweek); 
       sunofweek.setHours(8,0,0,0);
 
+
       CTask.find({  
         $and: [{
           "user_id": userid,
@@ -549,7 +555,7 @@ function getCWeeklyTask(userid){
         }] 
       })
       .then(data => {
-        //console.log(data);
+
         resolve(data);
       })
       .catch(err => {
@@ -606,7 +612,6 @@ function getCMonthlyTask(userid){
       let frstdyofmnth = new Date();
       frstdyofmnth.setDate(1);
       frstdyofmnth.setHours(8,0,0,0);
- 
 
       CTask.find({  
         $and: [{
@@ -619,7 +624,7 @@ function getCMonthlyTask(userid){
         }] 
       })
       .then(data => {
-        //console.log(data);
+
         resolve(data);
       })
       .catch(err => {
