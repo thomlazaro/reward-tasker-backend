@@ -3,6 +3,10 @@ const Task = db.task;
 const Team = db.team;
 const CTask = db.ctask;
 const User = db.user;
+const proj = "Project";
+const weekly = "Weekly";
+const monthly = "Monthly";
+
 
 // Create and Save a new Task
 exports.create = (req, res) => {
@@ -19,7 +23,8 @@ exports.create = (req, res) => {
       taskName: req.body.taskName,
       recurringType: req.body.recurringType,
       scope: req.body.scope,
-      points: req.body.points
+      points: req.body.points,
+      status: ""
   });
 
   // Save Task in the database
@@ -40,7 +45,7 @@ exports.create = (req, res) => {
 // Retrieve all Tasks from the database.
 exports.findAll = (req, res) => {
 
-  Task.find({},{createdAt:0,updatedAt:0,__v:0})
+  Task.find({},{status:0,createdAt:0,updatedAt:0,__v:0})
     .then(data => {
       res.send(
         { status : true , message:"Existing tasks retrieved successfully!" , data: data }
@@ -57,13 +62,12 @@ exports.findAll = (req, res) => {
 // Retrieve all Tasks by team from the database.
 exports.findByTeam = (req, res) => {
   const team = req.params.team;
-  const proj = "Project";
 
   //check if team exist
   checkTeamExist(team).then(function(result) {
     //if team exist continue on next query
     if(result){
-      Task.find({ $or: [ { "scope": proj}, { "scope": team } ] },{createdAt:0,updatedAt:0,__v:0})
+      Task.find({ $or: [ { "scope": proj}, { "scope": team } ] },{status:0,createdAt:0,updatedAt:0,__v:0})
       .then(data => {
         res.send(
           { status : true , message: team + " team existing tasks retrieved successfully!" , data: data }
@@ -92,7 +96,7 @@ exports.findOne = (req, res) => {
   const id = req.params.id;
 
 
-  Task.find({"_id":id},{createdAt:0,updatedAt:0,__v:0})
+  Task.find({"_id":id},{status:0,createdAt:0,updatedAt:0,__v:0})
     .then(data => {
       if(!data || !data.length){
         res.status(404).send({ status: false , message: "Task with id " + id +" does not exist!", data: null });
@@ -176,7 +180,7 @@ exports.completeTask = (req, res) => {
         complete_date: datenow
   });
 
-  checkUserExist(id).then(function(result) {
+  checkUser(id,"exist").then(function(result) {
   //if user exist continue on next query
     if(result){
       //check if task exist
@@ -197,7 +201,7 @@ exports.completeTask = (req, res) => {
           });
         }
         else{
-          res.status(404).send({ status: false , message: "Task with id " + id +" does not exist!", data: null });
+          res.status(404).send({ status: false , message: "Task with id " + taskid +" does not exist!", data: null });
         }
       })
       .catch(function(message){
@@ -210,6 +214,179 @@ exports.completeTask = (req, res) => {
     else{
       res.status(404).send({ status: false , message: "User with id " + id +" does not exist!", data: null });
     }
+  })
+  .catch(function(message){
+    res.status(500).send(
+      { status : false , message: message , data: null }
+    )
+  });
+
+};
+
+//get all task available to specific user
+exports.getMyTask = (req, res) => {
+
+  let id = req.params.id;
+  let monthlylist;
+  let weeklylist;
+
+
+  //get the team name of the user
+  checkUser(id,"team").then(function(result) {
+    let teamname = result;
+    //check if team exist
+    checkTeamExist(teamname).then(function(result) {
+      //if team exist continue on next query
+      if(result){
+
+        //get weekly task list
+        checkWeeklyTask(teamname)
+        .then(result => {
+          //save list in variable
+          weeklylist = result;
+          
+          //get completed weekly task for specific user
+          checkCWeeklyTask(id)
+            .then(result2 => {
+              let weekcount = 0;
+              
+              // go through the retrieved weekly list
+              while(weekcount < weeklylist.length) {
+                
+                let compcount = 0;
+                //go through the retrived completed weekly list
+                while (compcount < result2.length) {
+                  
+                  //compare weekly and completed weekly list and see if task is already completed
+                  if(weeklylist[weekcount]._id.toString() === result2[compcount].task_id.toString()){
+                    let datenow = new Date().toString().substr(4,11);
+                    let datecomp = result2[compcount].complete_date.toString().substr(4,11);
+                    
+                    //if today's date is not equal to completed date, remove task from weekly list
+                    if(!(datenow === datecomp)){
+                      
+                      weeklylist.splice(weekcount,1);
+                      if(!(weekcount === 0)){
+                        weekcount--;
+                      }
+                      
+                    }
+                    else{
+                      
+                      //if today's date is equal to completed date, status must be complete and break loop
+                      weeklylist[weekcount].status = "Complete";
+                      break;
+                    }
+                    compcount++;
+                  }
+                  else{
+                    
+                    //if task does not exist on completed task list, status must be not complete
+                    weeklylist[weekcount].status = "Not Complete";
+                    compcount++;
+                    
+                  }
+                  
+                  
+                }
+                
+                weekcount++;
+              };
+             
+            })
+            .catch(message => {
+              res.status(500).send(
+                { status : false , message: message , data: null }
+              )
+            });
+       
+        })
+        .catch(message => {
+          res.status(500).send(
+            { status : false , message: message , data: null }
+          )
+        });
+
+        //get monthly list
+        checkMonthlyTask(teamname)
+        .then(result => {
+          //save list in variable
+        
+          monthlylist = result;
+          //get completed monthly task for specific user
+          checkCMonthlyTask(id)
+            .then(result2 => {
+              
+              let monthcount = 0;
+              //go through monthly task list
+              while(monthcount < monthlylist.length) {
+                
+                let compcount = 0;
+                //go through completed monthly task list
+                while (compcount < result2.length) {
+                  
+                  //compare monthly list and completed monthly list and see if task was already completed
+                  if(monthlylist[monthcount]._id.toString() === result2[compcount].task_id.toString()){
+                    let datenow = new Date().toString().substr(4,11);
+
+                    let datecomp = result2[compcount].complete_date.toString().substr(4,11);
+                    
+                    //if today's date is not equal to completed date, remove task from list
+                    if(!(datenow === datecomp)){
+                      
+                      monthlylist.splice(monthcount,1);
+                      if(!(monthcount === 0)){
+                        monthcount--;
+                      }
+                      
+                      
+                    }
+                    else{
+                      //if today's date is equal to completed date, status must be complete and break loop
+                      monthlylist[monthcount].status = "Complete";
+                      break;
+                    }
+                    compcount++;
+                  }
+                  else{
+                    //if task does not exist in completed list, status must be not complete
+                    monthlylist[monthcount].status = "Not Complete";
+                    compcount++;
+                    
+                  }
+                  
+                  
+                }
+                
+                monthcount++;
+              };
+              //append processed weeklylist and monthlylist and send as response
+              let mytasklist = monthlylist.concat(weeklylist);
+              res.send({mytask:mytasklist});
+            })
+            .catch(message => {
+              res.status(500).send(
+                { status : false , message: message , data: null }
+              )
+            });
+          
+        })
+        .catch(message => {
+          res.status(500).send(
+            { status : false , message: message , data: null }
+          )
+        });
+
+      }
+      else{
+        res.status(404).send({ status: false , message: "Team with name " + team +" does not exist!", data: null });
+      }
+    })
+    .catch(function(message){
+      res.status(500).send(
+        { status : false , message: message , data: null }
+      )
+    });
   })
   .catch(function(message){
     res.status(500).send(
@@ -252,17 +429,29 @@ async function checkTeamExist(team){
 };
 
 //check if user exist in database
-function getUser(id){
+function getUser(id,purpose){
         
   return new Promise((resolve, reject) => {
      
     User.find({"_id":id})
     .then(data => {
       if(!data || !data.length){
-        resolve(false);
+        if(purpose==="exist"){
+          resolve(false);
+        }
+        else if(purpose==="team"){
+          resolve(data[0].team);
+        }
+        
       }
       else {
-        resolve(true);
+        if(purpose==="exist"){
+          resolve(true);
+        }
+        else if(purpose==="team"){
+          resolve(data[0].team);
+        }
+        
 
       }
     })
@@ -274,9 +463,9 @@ function getUser(id){
 };
 
 //async function for checking if user exist
-async function checkUserExist(id){
+async function checkUser(id,purpose){
       //wait for promise    
-      let result = await (getUser(id));
+      let result = await (getUser(id,purpose));
       //anything here is executed after result is resolved
       return result;
 };
@@ -311,3 +500,141 @@ async function checkTaskExist(id){
       return result;
 };
 
+//get list of weekly task in database
+function getWeeklyTask(team){
+        
+  return new Promise((resolve, reject) => {
+
+      Task.find({  $and: [{ "recurringType": weekly, $or: [ { "scope": proj}, { "scope": team } ] }] },{createdAt:0,updatedAt:0,__v:0})
+      .then(data => {
+        resolve(data);
+      })
+      .catch(err => {
+        console.log("getWeeklyTask function error:" + err.message);
+        reject(err.message);
+      });    
+     
+
+  })
+};
+
+//async function for getting weekly task
+async function checkWeeklyTask(team){
+      //wait for promise    
+      let result = await (getWeeklyTask(team));
+      //anything here is executed after result is resolved
+      return result;
+};
+
+//get list of specific user completed weekly task in database
+function getCWeeklyTask(userid){
+        
+  return new Promise((resolve, reject) => {
+
+      //get first day of week(sunday)
+      let datenow = new Date();
+      let dayofweek = new Date().getDay();
+      let sunofweek = new Date();
+      sunofweek.setDate(sunofweek.getDate()-dayofweek); 
+      sunofweek.setHours(8,0,0,0);
+
+      CTask.find({  
+        $and: [{
+          "user_id": userid,
+          "recurringType": weekly,
+          "complete_date": {
+            $gte: sunofweek,
+            $lt: datenow
+          }
+        }] 
+      })
+      .then(data => {
+        //console.log(data);
+        resolve(data);
+      })
+      .catch(err => {
+        console.log("getCWeeklyTask function error:" + err.message);
+        reject(err.message);
+      });    
+     
+
+  })
+};
+
+//async function for checking if task exist
+async function checkCWeeklyTask(userid){
+      //wait for promise    
+      let result = await (getCWeeklyTask(userid));
+      //anything here is executed after result is resolved
+      return result;
+};
+
+//get list of monthly task in database
+function getMonthlyTask(team){
+        
+  return new Promise((resolve, reject) => {
+
+      Task.find({  $and: [{ "recurringType": monthly, $or: [ { "scope": proj}, { "scope": team } ] }] },{createdAt:0,updatedAt:0,__v:0})
+      .then(data => {
+        resolve(data);
+      })
+      .catch(err => {
+        console.log("getMonthlyTask function error:" + err.message);
+        reject(err.message);
+      });    
+     
+
+  })
+};
+
+//async function for getting monthly task
+async function checkMonthlyTask(team){
+      //wait for promise    
+      let result = await (getMonthlyTask(team));
+      //anything here is executed after result is resolved
+      return result;
+};
+
+//get list of specific user completed monthly task in database
+function getCMonthlyTask(userid){
+        
+  return new Promise((resolve, reject) => {
+
+      let datenow = new Date();
+
+      //get first day of month
+      let frstdyofmnth = new Date();
+      frstdyofmnth.setDate(1);
+      frstdyofmnth.setHours(8,0,0,0);
+ 
+
+      CTask.find({  
+        $and: [{
+          "user_id": userid,
+          "recurringType": monthly,
+          "complete_date": {
+            $gte: frstdyofmnth,
+            $lt: datenow
+          }
+        }] 
+      })
+      .then(data => {
+        //console.log(data);
+        resolve(data);
+      })
+      .catch(err => {
+        console.log("getCMonthlyTask function error:" + err.message);
+        reject(err.message);
+      });    
+     
+
+  })
+};
+
+//async function for checking if task exist
+async function checkCMonthlyTask(userid){
+      //wait for promise    
+      let result = await (getCMonthlyTask(userid));
+      //anything here is executed after result is resolved
+      return result;
+};

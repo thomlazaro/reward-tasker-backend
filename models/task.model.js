@@ -6,7 +6,8 @@ module.exports = mongoose => {
         taskName: String,
         recurringType: String,
         scope: String,
-        points: Number
+        points: Number,
+        status: String
       },
       { timestamps: true }
     )
