@@ -232,12 +232,7 @@ exports.getMyTask = (req, res) => {
   let mytasklist = [];
 
   //get the team name of the user
-  checkUser(id,"team").then(function(result) {
-    let teamname = result;
-    //check if team exist
-    checkTeamExist(teamname).then(function(result) {
-      //if team exist continue on next query
-      if(result){
+  checkUser(id,"team").then(teamname => {
 
         //get weekly task list
         checkWeeklyTask(teamname)
@@ -382,16 +377,6 @@ exports.getMyTask = (req, res) => {
           )
         });
 
-      }
-      else{
-        res.status(404).send({ status: false , message: "Team with name " + team +" does not exist!", data: null });
-      }
-    })
-    .catch(function(message){
-      res.status(500).send(
-        { status : false , message: message , data: null }
-      )
-    });
   })
   .catch(function(message){
     res.status(500).send(
