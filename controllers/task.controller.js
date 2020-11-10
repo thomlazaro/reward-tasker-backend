@@ -236,30 +236,35 @@ exports.getMyTask = (req, res) => {
         //get daily task list
         checkDailyTask(teamname,id,res)
         .then(result => {
-          //save list in variable
-          mytasklist = result;
+          //if result is not empty, save list in variable
+          if(result.length!=0){
+            mytasklist = result;
+          }
+          // else{
+          //   //do something else
+          // }    
             //get weekly list
             checkWeeklyTask(teamname,id,mytasklist,res)
             .then(result => {
-              //query for monthly task list is called inside checkMonthlyTask function
+              //query for monthly task list is called inside checkWeeklyTask function
 
             })
-            .catch(message => {
+            .catch(err => {
               res.status(500).send(
-                { status : false , message: message , data: null }
+                { status : false , message: err.message , data: null }
               )
             });
         })
-        .catch(message => {
+        .catch(err => {
           res.status(500).send(
-            { status : false , message: message , data: null }
+            { status : false , message: err.message , data: null }
           )
         });
 
   })
-  .catch(function(message){
+  .catch(function(err){
     res.status(500).send(
-      { status : false , message: message , data: null }
+      { status : false , message: err.message , data: null }
     )
   });
 
@@ -399,9 +404,9 @@ async function checkDailyTask(team,id,res){
               result = getAvailableTask(result,result2);
 
             })
-            .catch(message => {
+            .catch(err => {
               res.status(500).send(
-                { status : false , message: message , data: null }
+                { status : false , message: err.message , data: null }
               )
             });
       return result;
@@ -480,23 +485,32 @@ async function checkWeeklyTask(team,id,mytasklist,res){
             .then(result2 => {
             
               result = getAvailableTask(result,result2);
-              mytasklist = mytasklist.concat(result);
+              if(result.length!=0){
+             
+                mytasklist = mytasklist.concat(result);
+
+              }
+              // else{
+
+              //   //do something else
+              // }
+              
               //get monthly list
               checkMonthlyTask(team,id,mytasklist,res)
               .then(result => {
                 //additional query can be added here. checkDailyTask function is responsible for sending
                 //the mytasklist as a response
               })
-              .catch(message => {
+              .catch(err => {
                 res.status(500).send(
-                  { status : false , message: message , data: null }
+                  { status : false , message: err.message , data: null }
                 )
               });
 
             })
-            .catch(message => {
+            .catch(err => {
               res.status(500).send(
-                { status : false , message: message , data: null }
+                { status : false , message: err.message , data: null }
               )
             });
       return result;
@@ -568,24 +582,43 @@ function getMonthlyTask(team){
 async function checkMonthlyTask(team,id,mytasklist,res){
       //wait for promise    
       let result = await (getMonthlyTask(team));
+
       //anything here is executed after result is resolved
       //get completed monthly task for specific user
       checkCMonthlyTask(id)
             .then(result2 => {
-              
+       
               result = getAvailableTask(result,result2);
+            
               //append processed monthlylist to mytask and send as response
-              mytasklist = mytasklist.concat(result);
-              //send response
-              res.send(
+              if(result.length!=0){
+              
+                mytasklist = mytasklist.concat(result);
+              }
+              // else{
+             
+              //   //do something else
+              // }
+              //if mytasklist is not empty, send list normally else, send message to inform that all tasks are completed
+              if(mytasklist.length!=0){
+                res.send(
                 { status : true ,
                   message: "Available tasks successfully retrieved!" , 
                   data: mytasklist }
-              );
+                );
+              }
+              else{
+                res.send(
+                { status : true ,
+                  message: "No task available! User has completed all assigned tasks!" , 
+                  data: null }
+                );
+              }
+
             })
-            .catch(message => {
+            .catch(err => {
               res.status(500).send(
-                { status : false , message: message , data: null }
+                { status : false , message: err.message , data: null }
               )
             });
       return result;
@@ -649,7 +682,7 @@ function getAvailableTask(tasklist,complist){
 
                 let compcount = 0;
                 //go through the retrived completed task list
-                while (compcount < complist.length) {
+                while ((compcount < complist.length) && tasklist.length!=0) {
 
                   //compare current task and completed task list and see if task is already completed
                   if(tasklist[taskcount]._id.toString() === complist[compcount].task_id.toString()){
@@ -683,13 +716,17 @@ function getAvailableTask(tasklist,complist){
                   else{
                     compcount++;
                   }
+
                   //if all completed tasks are search thoroughly, mark task as not completed
                   if(compcount===complist.length){ 
 
                     //if task does not exist on completed task list, status must be not complete
-                    tasklist[taskcount].status = "Not Complete";
-                    taskcount++;
-                    compcount++;
+                    if(tasklist.length!=0){
+                      tasklist[taskcount].status = "Not Complete";
+                      taskcount++;
+                      compcount++;
+                    }
+                    
                     
                   }
                   
@@ -700,9 +737,11 @@ function getAvailableTask(tasklist,complist){
   }
   //if completed task list is empty
   else{
-    while(taskcount < tasklist.length){
+    if(tasklist.length!=0){
+       while(taskcount < tasklist.length){
         tasklist[taskcount].status = "Not Complete";
         taskcount++;
+      }
     }
   }
   
