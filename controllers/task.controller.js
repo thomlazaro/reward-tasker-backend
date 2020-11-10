@@ -6,6 +6,7 @@ const User = db.user;
 const proj = "Project";
 const weekly = "Weekly";
 const monthly = "Monthly";
+const daily = "Daily";
 
 
 // Create and Save a new Task
@@ -232,15 +233,16 @@ exports.getMyTask = (req, res) => {
   //get the team name of the user
   checkUser(id,"team").then(teamname => {
 
-        //get weekly task list
-        checkWeeklyTask(teamname,id,res)
+        //get daily task list
+        checkDailyTask(teamname,id,res)
         .then(result => {
           //save list in variable
           mytasklist = result;
-            //get monthly list
-            checkMonthlyTask(teamname,id,mytasklist,res)
+            //get weekly list
+            checkWeeklyTask(teamname,id,mytasklist,res)
             .then(result => {
-              //additional query can be added here
+              //query for monthly task list is called inside checkMonthlyTask function
+
             })
             .catch(message => {
               res.status(500).send(
@@ -367,6 +369,88 @@ async function checkTaskExist(id){
       return result;
 };
 
+//get list of daily task in database
+function getDailyTask(team){
+        
+  return new Promise((resolve, reject) => {
+
+      Task.find({  $and: [{ "recurringType": daily, $or: [ { "scope": proj}, { "scope": team } ] }] },{createdAt:0,updatedAt:0,__v:0})
+      .then(data => {
+        resolve(data);
+      })
+      .catch(err => {
+        console.log("getDailyTask function error:" + err.message);
+        reject(err.message);
+      });    
+     
+
+  })
+};
+
+//async function for getting daily task
+async function checkDailyTask(team,id,res){
+      //wait for promise    
+      let result = await (getDailyTask(team));
+      //anything here is executed after result is resolved
+      //get completed daily task for specific user
+      checkCDailyTask(id)
+            .then(result2 => {
+              
+              result = getAvailableTask(result,result2);
+
+            })
+            .catch(message => {
+              res.status(500).send(
+                { status : false , message: message , data: null }
+              )
+            });
+      return result;
+};
+
+//get list of specific user completed daily task in database
+function getCDailyTask(userid){
+        
+  return new Promise((resolve, reject) => {
+
+      let datenow = new Date();
+      datenow.setHours(31,59,59,999);
+
+      //get today's date on 12oc midnight
+      let datenow12oc = new Date();
+      datenow12oc.setHours(8,0,0,0);
+
+      CTask.find({  
+        $and: [{
+          "user_id": userid,
+          "recurringType": daily,
+          "complete_date": {
+            $gte: datenow12oc,
+            $lte: datenow
+          }
+        }] 
+      })
+      .then(data => {
+
+        resolve(data);
+      })
+      .catch(err => {
+        console.log("getCDailyTask function error:" + err.message);
+        reject(err.message);
+      });    
+     
+
+  })
+};
+
+//async function to get completed daily task
+async function checkCDailyTask(userid){
+      //wait for promise    
+      let result = await (getCDailyTask(userid));
+      //anything here is executed after result is resolved
+
+      return result;
+};
+
 //get list of weekly task in database
 function getWeeklyTask(team){
 
@@ -386,7 +470,7 @@ function getWeeklyTask(team){
 };
 
 //async function for getting weekly task
-async function checkWeeklyTask(team,id,res){
+async function checkWeeklyTask(team,id,mytasklist,res){
       //wait for promise    
       let result = await (getWeeklyTask(team));
       //anything here is executed after result is resolved
@@ -396,6 +480,18 @@ async function checkWeeklyTask(team,id,res){
             .then(result2 => {
             
               result = getAvailableTask(result,result2);
+              mytasklist = mytasklist.concat(result);
+              //get monthly list
+              checkMonthlyTask(team,id,mytasklist,res)
+              .then(result => {
+                //additional query can be added here. checkDailyTask function is responsible for sending
+                //the mytasklist as a response
+              })
+              .catch(message => {
+                res.status(500).send(
+                  { status : false , message: message , data: null }
+                )
+              });
 
             })
             .catch(message => {
@@ -442,7 +538,7 @@ function getCWeeklyTask(userid){
   })
 };
 
-//async function for checking if task exist
+//async function to get completed weekly tasks
 async function checkCWeeklyTask(userid){
       //wait for promise    
       let result = await (getCWeeklyTask(userid));
@@ -481,7 +577,11 @@ async function checkMonthlyTask(team,id,mytasklist,res){
               //append processed monthlylist to mytask and send as response
               mytasklist = mytasklist.concat(result);
               //send response
-              res.send({mytask:mytasklist});
+              res.send(
+                { status : true ,
+                  message: "Available tasks successfully retrieved!" , 
+                  data: mytasklist }
+              );
             })
             .catch(message => {
               res.status(500).send(
@@ -527,7 +627,7 @@ function getCMonthlyTask(userid){
   })
 };
 
-//async function for checking if task exist
+//async function to get completed monthly tasks
 async function checkCMonthlyTask(userid){
       //wait for promise    
       let result = await (getCMonthlyTask(userid));
@@ -562,6 +662,7 @@ function getAvailableTask(tasklist,complist){
                     if(!(datenow === datecomp)){
                  
                       tasklist.splice(taskcount,1);
+                      //if the remove task is not from index 0, subtract counter by 1
                       if(!(taskcount === 0)){
                         taskcount--;
 
@@ -582,7 +683,7 @@ function getAvailableTask(tasklist,complist){
                   else{
                     compcount++;
                   }
-
+                  //if all completed tasks are search thoroughly, mark task as not completed
                   if(compcount===complist.length){ 
 
                     //if task does not exist on completed task list, status must be not complete
@@ -607,3 +708,5 @@ function getAvailableTask(tasklist,complist){
   
   return tasklist;
 }
+
+
