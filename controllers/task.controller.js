@@ -240,9 +240,7 @@ exports.getMyTask = (req, res) => {
           if(result.length!=0){
             mytasklist = result;
           }
-          // else{
-          //   //do something else
-          // }    
+ 
             //get weekly list
             checkWeeklyTask(teamname,id,mytasklist,res)
             .then(result => {
@@ -490,15 +488,12 @@ async function checkWeeklyTask(team,id,mytasklist,res){
                 mytasklist = mytasklist.concat(result);
 
               }
-              // else{
-
-              //   //do something else
-              // }
+ 
               
               //get monthly list
               checkMonthlyTask(team,id,mytasklist,res)
               .then(result => {
-                //additional query can be added here. checkDailyTask function is responsible for sending
+                //additional query can be added here. checkMonthlyTask function is responsible for sending
                 //the mytasklist as a response
               })
               .catch(err => {
@@ -595,11 +590,8 @@ async function checkMonthlyTask(team,id,mytasklist,res){
               
                 mytasklist = mytasklist.concat(result);
               }
-              // else{
-             
-              //   //do something else
-              // }
-              //if mytasklist is not empty, send list normally else, send message to inform that all tasks are completed
+
+              //if mytasklist is not empty, send list normally else send message to inform that all tasks are completed
               if(mytasklist.length!=0){
                 res.send(
                 { status : true ,
@@ -681,7 +673,7 @@ function getAvailableTask(tasklist,complist){
               while(taskcount < tasklist.length) {
 
                 let compcount = 0;
-                //go through the retrived completed task list
+                //go through the retrieved completed task list
                 while ((compcount < complist.length) && tasklist.length!=0) {
 
                   //compare current task and completed task list and see if task is already completed
