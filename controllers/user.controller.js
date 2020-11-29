@@ -5,21 +5,19 @@ const cf = require("../functions/custom-function.js");
 // Create and Save a new User
 exports.create = (req, res) => {
   // Validate request
-  if (!req.body.userid) {
+  if (!req.body.username) {
     res.status(400).send(
-        { status : false , message:"Data to be added cannot be empty!" , data: null }
-      );
+      { status: false, message: "Data to be added cannot be empty!", data: null }
+    );
     return;
   }
 
   //create base64 string for default password
-  let base64pass = cf.encodeToBase64(pass);
+  // let base64pass = cf.encodeToBase64(pass);
 
   // Create a User
   const user = new User({
-    userid: req.body.userid,
     username: req.body.username,
-    password: base64pass,
     fullname: req.body.fullname,
     team: req.body.team,
     role: req.body.role
@@ -30,12 +28,12 @@ exports.create = (req, res) => {
     .save(user)
     .then(data => {
       res.send(
-        { status : true , message:"New user added successfully!" , data: data }
+        { status: true, message: "New user added successfully!", data: data }
       );
     })
     .catch(err => {
       res.status(500).send(
-        { status : false , message: err.message , data: null }
+        { status: false, message: err.message, data: null }
       );
     });
 };
@@ -43,15 +41,16 @@ exports.create = (req, res) => {
 // Retrieve all Users from the database.
 exports.findAll = (req, res) => {
 
-  User.find({},{password:0,createdAt:0,updatedAt:0,__v:0})
+  User.find({}, { createdAt: 0, updatedAt: 0, __v: 0 })
+    .sort('fullname')
     .then(data => {
       res.send(
-        { status : true , message:"Existing users retrieved successfully!" , data: data }
+        { status: true, message: "Existing users retrieved successfully!", data: data }
       );
     })
     .catch(err => {
       res.status(500).send(
-        { status : false , message: err.message , data: null }
+        { status: false, message: err.message, data: null }
       );
     });
 };
@@ -60,14 +59,14 @@ exports.findAll = (req, res) => {
 exports.findOne = (req, res) => {
   const id = req.params.id;
 
-  User.find({"_id":id},{password:0,createdAt:0,updatedAt:0,__v:0})
+  User.find({ "_id": id }, { password: 0, createdAt: 0, updatedAt: 0, __v: 0 })
     .then(data => {
-      if(!data || !data.length){
-        res.status(404).send({ status: false , message: "User with id " + id +" does not exist!", data: null });
+      if (!data || !data.length) {
+        res.status(404).send({ status: false, message: "User with id " + id + " does not exist!", data: null });
       }
       else {
         res.send(
-            { status : true , message: "User with id " + id + " retrieved successfully!" , data: data[0] }
+          { status: true, message: "User with id " + id + " retrieved successfully!", data: data[0] }
         );
       }
     })
@@ -75,7 +74,7 @@ exports.findOne = (req, res) => {
       res
         .status(500)
         .send(
-          { status : false , message: err.message , data: null }
+          { status: false, message: err.message, data: null }
         );
     });
 };
@@ -85,16 +84,16 @@ exports.update = (req, res) => {
   // Validate request
   if (!req.body) {
     res.status(400).send(
-        { status : false , message:"Data to be updated cannot be empty!" , data: null }
-      );
+      { status: false, message: "Data to be updated cannot be empty!", data: null }
+    );
     return;
   }
 
   const id = req.params.id;
 
-  let condition = {"_id":id};
+  let condition = { "_id": id };
 
-  User.findOneAndUpdate(condition, req.body, {new:true, useFindAndModify: false })
+  User.findOneAndUpdate(condition, req.body, { new: true, useFindAndModify: false })
     .then(data => {
       if (!data) {
         res.status(404).send({
@@ -102,14 +101,14 @@ exports.update = (req, res) => {
           message: `Cannot update User with id=${id}. User does not exist!`,
           data: null
         });
-      } 
-      else{
+      }
+      else {
         res.send({
-          status: true, 
+          status: true,
           message: "User was updated successfully!",
-          data: data 
+          data: data
         });
-      } 
+      }
     })
     .catch(err => {
       res.status(500).send({
