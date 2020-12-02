@@ -3,8 +3,9 @@ module.exports = mongoose => {
     "task",
     mongoose.Schema(
       {
-        taskName: String,
-        recurringType: String,
+        title: String,
+        description: String,
+        frequency: String,
         scope: String,
         points: Number,
         status: String

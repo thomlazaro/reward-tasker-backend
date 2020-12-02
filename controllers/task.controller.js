@@ -12,7 +12,7 @@ const daily = "Daily";
 // Create and Save a new Task
 exports.create = (req, res) => {
   // Validate request
-  if (!req.body.taskName) {
+  if (!req.body.title) {
     res.status(400).send(
         { status : false , message:"Data to be added cannot be empty!" , data: null }
       );
@@ -21,11 +21,12 @@ exports.create = (req, res) => {
 
   // Create a Task
   const task = new Task({
-      taskName: req.body.taskName,
-      recurringType: req.body.recurringType,
+      title: req.body.title,
+      description: req.body.description,
+      frequency: req.body.frequency,
       scope: req.body.scope,
       points: req.body.points,
-      status: ""
+      status: req.body.status
   });
 
   // Save Task in the database
@@ -46,7 +47,7 @@ exports.create = (req, res) => {
 // Retrieve all Tasks from the database.
 exports.findAll = (req, res) => {
 
-  Task.find({},{status:0,createdAt:0,updatedAt:0,__v:0})
+  Task.find({},{createdAt:0,updatedAt:0,__v:0})
     .then(data => {
       res.send(
         { status : true , message:"Existing tasks retrieved successfully!" , data: data }
