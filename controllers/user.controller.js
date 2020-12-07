@@ -59,7 +59,7 @@ exports.findAll = (req, res) => {
 exports.findOne = (req, res) => {
   const id = req.params.id;
 
-  User.find({ "_id": id }, { password: 0, createdAt: 0, updatedAt: 0, __v: 0 })
+  User.find({ "username": id }, { password: 0, createdAt: 0, updatedAt: 0, __v: 0 })
     .then(data => {
       if (!data || !data.length) {
         res.status(404).send({ status: false, message: "User with id " + id + " does not exist!", data: null });

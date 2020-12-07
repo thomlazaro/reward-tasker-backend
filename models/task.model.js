@@ -8,7 +8,8 @@ module.exports = mongoose => {
         frequency: String,
         scope: String,
         points: Number,
-        status: String
+        status: String,
+        duedate: Date
       },
       { timestamps: true }
     )
