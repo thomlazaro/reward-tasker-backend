@@ -227,48 +227,50 @@ exports.completeTask = (req, res) => {
 
 };
 
-//get all task available to specific user
-exports.getMyTask = (req, res) => {
 
-  let id = req.params.id;
-  let mytasklist = [];
-  //get the team name of the user
-  checkUser(id, "team").then(teamname => {
 
-    //get daily task list
-    checkDailyTask(teamname, id, res)
-      .then(result => {
-        //if result is not empty, save list in variable
-        if (result.length != 0) {
-          mytasklist = result;
-        }
 
-        //get weekly list
-        checkWeeklyTask(teamname, id, mytasklist, res)
-          .then(result => {
-            //query for monthly task list is called inside checkWeeklyTask function
+// exports.getMyTask = (req, res) => {
 
-          })
-          .catch(err => {
-            res.status(500).send(
-              { status: false, message: err.message, data: null }
-            )
-          });
-      })
-      .catch(err => {
-        res.status(500).send(
-          { status: false, message: err.message, data: null }
-        )
-      });
+//   let id = req.params.id;
+//   let mytasklist = [];
+//   //get the team name of the user
+//   checkUser(id, "team").then(teamname => {
 
-  })
-    .catch(function (err) {
-      res.status(500).send(
-        { status: false, message: err.message, data: null }
-      )
-    });
+//     //get daily task list
+//     checkDailyTask(teamname, id, res)
+//       .then(result => {
+//         //if result is not empty, save list in variable
+//         if (result.length != 0) {
+//           mytasklist = result;
+//         }
 
-};
+//         //get weekly list
+//         checkWeeklyTask(teamname, id, mytasklist, res)
+//           .then(result => {
+//             //query for monthly task list is called inside checkWeeklyTask function
+
+//           })
+//           .catch(err => {
+//             res.status(500).send(
+//               { status: false, message: err.message, data: null }
+//             )
+//           });
+//       })
+//       .catch(err => {
+//         res.status(500).send(
+//           { status: false, message: err.message, data: null }
+//         )
+//       });
+
+//   })
+//     .catch(function (err) {
+//       res.status(500).send(
+//         { status: false, message: err.message, data: null }
+//       )
+//     });
+
+// };
 
 
 //custom functions exclusive to this controller**********************************
@@ -745,5 +747,75 @@ function getAvailableTask(tasklist, complist) {
 
   return tasklist;
 }
+
+
+// *********************************************************** //
+
+//get all task available to specific user
+
+exports.getMyTask = async (req, res) => {
+
+  try {
+    const id = req.params.id;
+    const user = await User.findOne({ username: id });
+    const currentTasks = await Task.find({ scope: user.team, status: 'Active' });
+
+    let myTasks = [];
+
+    currentTasks.forEach(element => {
+      myTasks.push({
+        title: element.title,
+        description: element.description,
+        points: element.points,
+        frequency: element.frequency,
+        due: getDueDays(element.frequency, element.duedate)
+      });
+    });
+
+
+    res.json({
+      status: true,
+      message: 'List of all current week tasks',
+      data: myTasks
+    });
+
+  } catch (error) {
+
+    res.json({
+      status: false,
+      message: JSON.stringify(error),
+      data: null
+    });
+
+  }
+
+}
+
+function getDueDays(frequency, pDateRef) {
+  const now = new Date();
+  const dayOfWeek = now.getDay();
+  const dayOfMonth = now.getDate();
+  const daysInAMonth = getDaysInMonth(now.getMonth() + 1, now.getFullYear());
+
+  let refDate = (pDateRef) ? new Date(pDateRef) : now;
+  refDate.setDate(refDate.getDate() + 2);
+
+  // console.log('pDateRef: ', pDateRef, ' | refDate: ', refDate, ' | now - refDate: ', Math.floor((refDate - now) / (1000 * 60 * 60 * 24)));
+  // console.log('Month:', now.getMonth(), '| daysInAMonth: ', daysInAMonth, ' | dayOfMonth: ', dayOfMonth);
+  let n = 1;
+
+  if (frequency.trim() === 'One Time') {
+    n = Math.floor((refDate - now) / (1000 * 60 * 60 * 24));
+  } else if (frequency.trim() === 'Weekly') {
+    n = 5 - dayOfWeek;
+  } else if (frequency.trim() === 'Monthly') {
+    n = daysInAMonth - dayOfMonth;
+  }
+
+  return n;
+}
+function getDaysInMonth(month, year) {
+  return new Date(year, month, 0).getDate();
+};
 
 
