@@ -761,18 +761,33 @@ exports.getMyTask = async (req, res) => {
     const user = await User.findOne({ '_id': id });
     const currentTasks = await Task.find({ scope: user.team, status: 'Active' });
 
+    let lastYear = new Date();
+    lastYear.setMonth(lastYear.getMonth() - 12);
+
+    const completedTask = await CTask.find({ userid: mongoose.Types.ObjectId(id), completionDate: { $gte: lastYear } });
+
+    // let isCompleted = completedTask.find({taskid: mongoose.Types.ObjectId('5fcf945119ef6036104e8234') });
+
     let myTasks = [];
 
     currentTasks.forEach(element => {
-      myTasks.push({
-        title: element.title,
-        description: element.description,
-        points: element.points,
-        frequency: element.frequency,
-        scope: element.scope,
-        due: getDueDays(element.frequency, element.duedate),
-        completed: false
+      const index = completedTask.findIndex(obj => {
+        return obj.taskid.equals(element._id);
       });
+
+      if (index === -1) {
+        myTasks.push({
+          taskid: element._id.toString(),
+          title: element.title,
+          description: element.description,
+          points: element.points,
+          frequency: element.frequency,
+          scope: element.scope,
+          due: getDueDays(element.frequency, element.duedate),
+          completed: false
+        });
+      }
+
     });
 
     myTasks.sort((a, b) => (a.due > b.due) ? 1 : ((b.due > a.due) ? -1 : 0));
@@ -783,11 +798,11 @@ exports.getMyTask = async (req, res) => {
       data: myTasks
     });
 
-  } catch (error) {
+  } catch (err) {
 
     res.json({
       status: false,
-      message: JSON.stringify(error),
+      message: err.message,
       data: []
     });
 
