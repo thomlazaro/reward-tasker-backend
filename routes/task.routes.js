@@ -21,6 +21,9 @@ module.exports = app => {
   // Complete task assigned to user
   router.post("/complete/:id",task.completeTask);
 
+  // Get all completed task of a user
+  router.get("/complete/:id",task.getCompletedTask);
+
   //get task assigned to specific user
   router.get("/user/:id",task.getMyTask)
 

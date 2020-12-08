@@ -766,8 +766,6 @@ exports.getMyTask = async (req, res) => {
 
     const completedTask = await CTask.find({ userid: mongoose.Types.ObjectId(id), completionDate: { $gte: lastYear } });
 
-    // let isCompleted = completedTask.find({taskid: mongoose.Types.ObjectId('5fcf945119ef6036104e8234') });
-
     let myTasks = [];
 
     currentTasks.forEach(element => {
@@ -843,6 +841,7 @@ exports.completeTask = (req, res) => {
     taskid: mongoose.Types.ObjectId(req.body.taskid),
     userid: mongoose.Types.ObjectId(req.params.id),
     comments: req.body.comments,
+    points: req.body.points,
     completionDate: Date.now()
   });
 
@@ -857,6 +856,32 @@ exports.completeTask = (req, res) => {
       res.status(500).send(
         { status: false, message: err.message, data: null }
       );
+    });
+
+}
+
+exports.getCompletedTask = (req, res) => {
+
+  CTask.find({ 'userid': mongoose.Types.ObjectId(req.params.id) })
+    .populate('taskid', `title description points`)
+    .exec((err, data) => {
+
+      if (err) {
+        res.json({
+          status: false,
+          message: err.message,
+          data: []
+        });
+
+        return;
+      }
+
+      res.json({
+        status: true,
+        message: 'Tasks successfully retrieved.',
+        data: data
+      });
+
     });
 
 }

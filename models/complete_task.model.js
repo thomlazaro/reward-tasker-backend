@@ -7,7 +7,8 @@ module.exports = mongoose => {
         taskid: { type: schema.Types.ObjectId, ref: 'task' },
         userid: { type: schema.Types.ObjectId, ref: 'user' },
         comments: String,
-        completionDate: Date
+        completionDate: Date,
+        points: Number
       }
     )
   );
