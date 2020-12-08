@@ -1,14 +1,13 @@
 module.exports = mongoose => {
+  const schema = mongoose.Schema;
   const CTask = mongoose.model(
     "complete_task",
     mongoose.Schema(
       {
-        task_id: String,
-        user_id: String,
-        recurringType: String,
-        notes: String,
-        complete_date: Date
-
+        taskid: [{ type: schema.Types.ObjectId, ref: 'task' }],
+        userid: [{ type: schema.Types.ObjectId, ref: 'user' }],
+        comments: String,
+        completionDate: Date
       }
     )
   );

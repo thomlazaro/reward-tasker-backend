@@ -7,6 +7,7 @@ const proj = "Project";
 const weekly = "Weekly";
 const monthly = "Monthly";
 const daily = "Daily";
+const mongoose = require('mongoose')
 
 
 // Create and Save a new Task
@@ -160,72 +161,72 @@ exports.update = (req, res) => {
 };
 
 // Complete task using task id
-exports.completeTask = (req, res) => {
-  // Validate request
-  if (!req.body.task_id || !req.body.user_id) {
-    res.status(400).send(
-      { status: false, message: "No task id or user id provided!", data: null }
-    );
-    return;
-  }
+// exports.completeTask = (req, res) => {
+//   // Validate request
+//   if (!req.body.task_id || !req.body.user_id) {
+//     res.status(400).send(
+//       { status: false, message: "No task id or user id provided!", data: null }
+//     );
+//     return;
+//   }
 
-  //get current Date today
-  let datenow = new Date();
-  datenow.setHours(8, 0, 0, 0);
-  let id = req.params.id;
-  let taskid = req.body.task_id;
+//   //get current Date today
+//   let datenow = new Date();
+//   datenow.setHours(8, 0, 0, 0);
+//   let id = req.params.id;
+//   let taskid = req.body.task_id;
 
-  // Create a Complete Task
-  const ctask = new CTask({
-    task_id: req.body.task_id,
-    user_id: req.body.user_id,
-    recurringType: req.body.recurringType,
-    notes: req.body.notes,
-    complete_date: datenow
-  });
+//   // Create a Complete Task
+//   const ctask = new CTask({
+//     task_id: req.body.task_id,
+//     user_id: req.body.user_id,
+//     recurringType: req.body.recurringType,
+//     notes: req.body.notes,
+//     complete_date: datenow
+//   });
 
-  checkUser(id, "exist").then(function (result) {
-    //if user exist continue on next query
-    if (result) {
-      //check if task exist
-      checkTaskExist(taskid).then(function (result) {
-        if (result) {
-          // Save Complete Task in the database
-          ctask
-            .save(ctask)
-            .then(data => {
-              res.send(
-                { status: true, message: "Task completed!", data: data }
-              );
-            })
-            .catch(err => {
-              res.status(500).send(
-                { status: false, message: err.message, data: null }
-              );
-            });
-        }
-        else {
-          res.status(404).send({ status: false, message: "Task with id " + taskid + " does not exist!", data: null });
-        }
-      })
-        .catch(function (message) {
-          res.status(500).send(
-            { status: false, message: message, data: null }
-          )
-        });
-      ;
-    }
-    else {
-      res.status(404).send({ status: false, message: "User with id " + id + " does not exist!", data: null });
-    }
-  })
-    .catch(function (message) {
-      res.status(500).send(
-        { status: false, message: message, data: null }
-      )
-    });
+//   checkUser(id, "exist").then(function (result) {
+//     //if user exist continue on next query
+//     if (result) {
+//       //check if task exist
+//       checkTaskExist(taskid).then(function (result) {
+//         if (result) {
+//           // Save Complete Task in the database
+//           ctask
+//             .save(ctask)
+//             .then(data => {
+//               res.send(
+//                 { status: true, message: "Task completed!", data: data }
+//               );
+//             })
+//             .catch(err => {
+//               res.status(500).send(
+//                 { status: false, message: err.message, data: null }
+//               );
+//             });
+//         }
+//         else {
+//           res.status(404).send({ status: false, message: "Task with id " + taskid + " does not exist!", data: null });
+//         }
+//       })
+//         .catch(function (message) {
+//           res.status(500).send(
+//             { status: false, message: message, data: null }
+//           )
+//         });
+//       ;
+//     }
+//     else {
+//       res.status(404).send({ status: false, message: "User with id " + id + " does not exist!", data: null });
+//     }
+//   })
+//     .catch(function (message) {
+//       res.status(500).send(
+//         { status: false, message: message, data: null }
+//       )
+//     });
 
-};
+// };
 
 
 
@@ -757,7 +758,7 @@ exports.getMyTask = async (req, res) => {
 
   try {
     const id = req.params.id;
-    const user = await User.findOne({ username: id });
+    const user = await User.findOne({ '_id': id });
     const currentTasks = await Task.find({ scope: user.team, status: 'Active' });
 
     let myTasks = [];
@@ -768,10 +769,13 @@ exports.getMyTask = async (req, res) => {
         description: element.description,
         points: element.points,
         frequency: element.frequency,
-        due: getDueDays(element.frequency, element.duedate)
+        scope: element.scope,
+        due: getDueDays(element.frequency, element.duedate),
+        completed: false
       });
     });
 
+    myTasks.sort((a, b) => (a.due > b.due) ? 1 : ((b.due > a.due) ? -1 : 0));
 
     res.json({
       status: true,
@@ -784,7 +788,7 @@ exports.getMyTask = async (req, res) => {
     res.json({
       status: false,
       message: JSON.stringify(error),
-      data: null
+      data: []
     });
 
   }
@@ -817,5 +821,29 @@ function getDueDays(frequency, pDateRef) {
 function getDaysInMonth(month, year) {
   return new Date(year, month, 0).getDate();
 };
+
+exports.completeTask = (req, res) => {
+
+  const completedTask = new CTask({
+    taskid: mongoose.Types.ObjectId(req.body.taskid),
+    userid: mongoose.Types.ObjectId(req.params.id),
+    comments: req.body.comments,
+    completionDate: Date.now()
+  });
+
+  completedTask.save()
+    .then(data => {
+      res.json({
+        status: true,
+        message: "Task completion successfully registered.",
+        data: data
+      });
+    }).catch(err => {
+      res.status(500).send(
+        { status: false, message: err.message, data: null }
+      );
+    });
+
+}
 
 
